@@ -1,0 +1,17 @@
+- name: kubeadm reset
+  shell: kubeadm reset --force
+  register: output
+
+- name: reset iptables
+  shell: iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+
+- name: remove flannel interfaces
+  shell: "ip link delete {{ item }} || true"
+  with_items:
+  - flannel.1
+  - cni0
+
+- name: remove haproxy
+  docker_container:
+    name: haproxy
+    state: absent

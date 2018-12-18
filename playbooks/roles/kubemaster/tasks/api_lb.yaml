@@ -1,0 +1,13 @@
+- name: create haproxy.cfg
+  template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy.cfg
+
+- name: run haproxy container
+  docker_container:
+    name: haproxy
+    image: haproxy
+    state: started
+    network_mode: host
+    volumes:
+    - /etc/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro

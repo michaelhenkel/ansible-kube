@@ -1,0 +1,22 @@
+- name: create /etc/kubernetes/pki/etcd
+  file:
+    path: /etc/kubernetes/pki/etcd
+    state: directory
+    mode: 0755
+
+- name: copy stuff from master of masters
+  synchronize:
+    src: "{{ item }}"
+    dest: "{{ item }}"
+    mode: push
+  delegate_to: "{{ groups['masters'][0] }}"
+  with_items:
+    - /etc/kubernetes/pki/ca.crt
+    - /etc/kubernetes/pki/ca.key
+    - /etc/kubernetes/pki/sa.key
+    - /etc/kubernetes/pki/sa.pub
+    - /etc/kubernetes/pki/front-proxy-ca.crt
+    - /etc/kubernetes/pki/front-proxy-ca.key
+    - /etc/kubernetes/pki/etcd/ca.crt
+    - /etc/kubernetes/pki/etcd/ca.key
+    - /etc/kubernetes/admin.conf

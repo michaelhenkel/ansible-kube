@@ -1,0 +1,56 @@
+- name: check if master of master already runs
+  shell: kubectl get nodes || true
+  register: output
+
+- set_fact:
+    master_in_list: "{{ item | regex_search( ansible_hostname ) }}"
+  with_items: "{{ output.stdout_lines }}"
+   
+- name: create master of masters if not done
+  block:
+  - name: make sure kubelet runs on correct address
+    lineinfile:
+      path: /etc/sysconfig/kubelet
+      regexp: 'KUBELET_EXTRA_ARGS=--node-ip=.*'
+      line: 'KUBELET_EXTRA_ARGS=--node-ip={{ control_ip }}'
+
+  - name: enable kubelet service
+    systemd:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: True
+
+  - name: get master of master fqdn
+    set_fact:
+      master_of_master_fqdn: "{{ hostvars[groups['masters'][0]]['control_fqdn'] }}"
+
+  - name: get join_token
+    set_fact:
+      join_token: "{{ hostvars[groups['masters'][0]]['join_token'] }}"
+
+  - name: join master [ takes a while ]
+    shell: "kubeadm join master.local:6443 --apiserver-advertise-address {{ control_ip }} --apiserver-bind-port 16643 --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
+#    shell: "kubeadm join {{ master_of_master_fqdn }}:6443 --apiserver-advertise-address {{ control_ip }} --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
+    register: output
+
+  - name: create $HOME/.kube
+    file:
+      path: "{{ ansible_env.HOME }}/.kube"
+      state: directory
+      mode: 0755
+
+  - name: get user group
+    shell: id -gn
+    register: user_group
+
+  - name: copy /etc/kubernetes/admin.conf $HOME/.kube/config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: "{{ ansible_env.HOME }}/.kube/config"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ user_group.stdout }}"
+      mode: 0644
+      remote_src: yes
+  when:
+    - master_in_list is undefined

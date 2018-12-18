@@ -1,0 +1,69 @@
+- name: check if master of master already runs
+  shell: kubectl get nodes || true
+  register: output
+
+- set_fact:
+    master_in_list: "{{ item | regex_search( ansible_hostname ) }}"
+  with_items: "{{ output.stdout_lines }}"
+   
+- name: create master of masters if not done
+  block:
+  - name: make sure kubelet runs on correct address
+    lineinfile:
+      path: /etc/sysconfig/kubelet
+      regexp: 'KUBELET_EXTRA_ARGS=--node-ip=.*'
+      line: 'KUBELET_EXTRA_ARGS=--node-ip={{ control_ip }}'
+
+  - name: enable kubelet service
+    systemd:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: True
+
+  - name: create kubeadm-config.yaml
+    template:
+      src: kubeadm-config.yaml.j2
+      dest: /etc/kubeadm-config.yaml
+
+  - name: init master of masters [ takes a while ]
+    shell: kubeadm init --config=/etc/kubeadm-config.yaml
+    register: output
+
+  - name: create $HOME/.kube
+    file:
+      path: "{{ ansible_env.HOME }}/.kube"
+      state: directory
+      mode: 0755
+
+  - name: get user group
+    shell: id -gn
+    register: user_group
+
+  - name: copy /etc/kubernetes/admin.conf $HOME/.kube/config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: "{{ ansible_env.HOME }}/.kube/config"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ user_group.stdout }}"
+      mode: 0644
+      remote_src: yes
+
+#  - name: create kube-haproxy.yaml
+#    template:
+#      src: kube-haproxy.yaml.j2
+#      dest: /etc/kube-haproxy.yaml
+#
+#  - name: install haproxy
+#    shell: kubectl apply -f /etc/kube-haproxy.yaml
+#
+  - name: create kube-flannel.yaml
+    template:
+      src: kube-flannel.yaml.j2
+      dest: /etc/kube-flannel.yaml
+
+  - name: install flannel
+    shell: kubectl apply -f /etc/kube-flannel.yaml
+
+  when:
+    - master_in_list is undefined

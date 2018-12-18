@@ -1,0 +1,62 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: haproxy.cfg
+  namespace: kube-system
+data:
+  haproxy.cfg: |
+    listen kubernetes-apiserver-https
+      bind localhost:6443
+      bind 192.168.2.100:6443
+      option ssl-hello-chk
+      mode tcp
+      timeout client 3h
+      timeout server 3h
+      server master1 192.168.2.100:16443 check
+      server master2 192.168.2.101:16443 check backup
+      server master3 192.168.2.102:16443 check backup
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: kube-haproxy
+  namespace: kube-system
+  labels:
+    tier: node
+    app: flannelhaproxy
+spec:
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: flannelhaproxy
+    spec:
+      hostNetwork: true
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      serviceAccountName: flannel
+      containers:
+      - name: kube-haproxy
+        image: docker.io/haproxy
+        volumeMounts:
+          - name: config-volume
+            mountPath: /usr/local/etc/haproxy
+        command:
+        - haproxy
+        - -f
+        - /usr/local/etc/haproxy/haproxy.cfg
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+          limits:
+            cpu: "100m"
+            memory: "50Mi"
+        securityContext:
+          privileged: true
+      volumes:
+        - name: config-volume
+          configMap:
+            name: haproxy.cfg

@@ -1,0 +1,4 @@
+- name: reset all kubes
+  hosts: all
+  roles:
+    - reset

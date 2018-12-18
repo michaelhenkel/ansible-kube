@@ -1,0 +1,13 @@
+listen kubernetes-apiserver-https
+  bind localhost:6443
+  bind {{ control_fqdn }}:6443
+  option ssl-hello-chk
+  mode tcp
+  timeout client 3h
+  timeout server 3h
+  server {{ hostvars[groups['masters'][0]]['ansible_hostname'] }} {{ hostvars[groups['masters'][0]]['control_fqdn'] }}:16443 check
+{% for master in groups['masters'] %}
+{% if hostvars[groups['masters'][0]]['ansible_hostname'] != hostvars[master]['ansible_hostname'] %}
+  server {{ hostvars[master]['ansible_hostname'] }} {{ hostvars[master]['control_fqdn'] }}:16443 check backup
+{% endif %}
+{% endfor %}
