@@ -1,0 +1,19 @@
+---
+- name: get control network
+  set_fact:
+    control_ip: "{{ ansible_all_ipv4_addresses | ipaddr(control_network) }}"
+  when: control_network is defined
+
+- name: set control ip
+  set_fact:
+    control_ip: "{{ control_ip[0] }}"
+
+- name: get fqdn for control network
+  shell: "python -c 'import socket; print socket.getfqdn(\"{{ control_ip }}\")'"
+  register: output
+
+- set_fact:
+    control_fqdn: "{{ output.stdout }}"
+
+- name: join master
+  include: join_master.yaml

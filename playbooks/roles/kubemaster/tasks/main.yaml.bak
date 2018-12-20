@@ -1,0 +1,33 @@
+---
+- name: get control network
+  set_fact:
+    control_ip: "{{ ansible_all_ipv4_addresses | ipaddr(control_network) }}"
+  when: control_network is defined
+
+- name: set control ip
+  set_fact:
+    control_ip: "{{ control_ip[0] }}"
+
+- name: get fqdn for control network
+  shell: "python -c 'import socket; print socket.getfqdn(\"{{ control_ip }}\")'"
+  register: output
+
+- set_fact:
+    control_fqdn: "{{ output.stdout }}"
+
+- name: create control fqdn for all masters
+  include: control_fqdn.yaml
+  with_items:
+    - "{{ groups['masters'] }}"
+
+- name: get first master
+  set_fact:
+    master_of_masters: "{{ groups['masters'][0] }}"
+
+- name: setup master of masters
+  include: master_of_masters.yaml
+  when: master_of_masters == ansible_host
+
+- name: setup remaining masters
+  include: master.yaml
+  when: master_of_masters != ansible_host

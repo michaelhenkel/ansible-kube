@@ -20,64 +20,24 @@
   with_items:
     - "{{ groups['masters'] }}"
 
-- name: create api lb
-  include: api_lb.yaml
-
-- name: get first master
+- name: get master of masters
   set_fact:
     master_of_masters: "{{ groups['masters'][0] }}"
 
-- name: setup master of masters
-  include: master_of_masters.yaml
-  when: master_of_masters == ansible_host
+- name: set master of masters fqn
+  set_fact:
+    master_of_masters_fqdn: "{{ hostvars[master_of_masters]['control_fqdn'] }}"
 
-- name: create /etc/kubernetes/pki/etcd
-  file:
-    path: /etc/kubernetes/pki/etcd
-    state: directory
-    mode: 0755
-  when: master_of_masters != ansible_host
-
-- name: copy stuff from master of masters
-  synchronize:
-    src: "{{ item }}"
-    dest: "{{ item }}"
-    mode: push
-  delegate_to: "{{ groups['masters'][0] }}"
-  with_items:
-    - /etc/kubernetes/pki/ca.crt
-    - /etc/kubernetes/pki/ca.key
-    - /etc/kubernetes/pki/sa.key
-    - /etc/kubernetes/pki/sa.pub
-    - /etc/kubernetes/pki/front-proxy-ca.crt
-    - /etc/kubernetes/pki/front-proxy-ca.key
-    - /etc/kubernetes/pki/etcd/ca.crt
-    - /etc/kubernetes/pki/etcd/ca.key
-    - /etc/kubernetes/admin.conf
-
-- name: create join token
-  block:
-    - shell: kubeadm token create
-      register: output
-    - set_fact:
-        join_token: "{{ output.stdout }}"
+- name: get list of all nodes
+  shell: kubectl get nodes || true
+  register: nodes_list
   delegate_to: "{{ master_of_masters }}"
-  run_once: true
 
-- name: create discovery token
-  block:
-    - shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
-      register: output
-    - set_fact:
-        discovery_token: "{{ output.stdout }}"
-  delegate_to: "{{ master_of_masters }}"
-  run_once: true
+- name: check if master is in nodes list
+  set_fact:
+    master_in_list: "{{ item | regex_search( ansible_hostname ) }}"
+  with_items: "{{ nodes_list.stdout_lines }}"
 
-- name: setup remaining masters
-  include: master.yaml
-  when: master_of_masters != ansible_host
-
-- name: delete join token
-  shell: "kubeadm token delete {{ hostvars[groups['masters'][0]]['join_token'] }}"
-  delegate_to: "{{ master_of_masters }}"
-  run_once: true
+- name: create master if it doesn't exist
+  include: create_master.yaml
+  when: (master_in_list is defined and master_in_list != "") or master_in_list is undefined

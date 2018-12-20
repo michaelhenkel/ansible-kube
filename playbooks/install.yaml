@@ -2,3 +2,8 @@
   hosts: masters
   roles:
     - kubemaster
+
+- name: Install kube nodes
+  hosts: nodes
+  roles:
+    - kubenode

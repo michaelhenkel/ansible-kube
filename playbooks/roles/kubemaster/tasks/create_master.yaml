@@ -1,0 +1,129 @@
+- name: create api lb
+  include: api_lb.yaml
+
+- name: make sure kubelet runs on correct address
+  lineinfile:
+    path: /etc/sysconfig/kubelet
+    regexp: 'KUBELET_EXTRA_ARGS=--node-ip=.*'
+    line: 'KUBELET_EXTRA_ARGS=--node-ip={{ control_ip }}'
+
+- name: enable kubelet service
+  systemd:
+    name: kubelet
+    state: restarted
+    daemon_reload: yes
+    enabled: True
+
+- name: init master of masters
+  block:
+  - name: create kubeadm-config.yaml
+    template:
+      src: kubeadm-config.yaml.j2
+      dest: /etc/kubeadm-config.yaml
+
+  - name: init master of masters [ takes a while ]
+    shell: kubeadm init --config=/etc/kubeadm-config.yaml
+    register: output
+
+  - name: create $HOME/.kube
+    file:
+      path: "{{ ansible_env.HOME }}/.kube"
+      state: directory
+      mode: 0755
+
+  - name: get user group
+    shell: id -gn
+    register: user_group
+
+  - name: copy /etc/kubernetes/admin.conf $HOME/.kube/config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: "{{ ansible_env.HOME }}/.kube/config"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ user_group.stdout }}"
+      mode: 0644
+      remote_src: yes
+
+  - name: create kube-flannel.yaml
+    template:
+      src: kube-flannel.yaml.j2
+      dest: /etc/kube-flannel.yaml
+
+  - name: install flannel
+    shell: kubectl apply -f /etc/kube-flannel.yaml
+  
+  when: master_of_masters == ansible_host
+
+- name: create join token
+  block:
+    - shell: kubeadm token create
+      register: output
+    - set_fact:
+        join_token: "{{ output.stdout }}"
+  delegate_to: "{{ master_of_masters }}"
+#  run_once: true
+
+- name: create discovery token
+  block:
+    - shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+      register: output
+    - set_fact:
+        discovery_token: "{{ output.stdout }}"
+  delegate_to: "{{ master_of_masters }}"
+  run_once: true
+
+- name: create /etc/kubernetes/pki/etcd
+  file:
+    path: /etc/kubernetes/pki/etcd
+    state: directory
+    mode: 0755
+
+- name: copy stuff from master of masters
+  synchronize:
+    src: "{{ item }}"
+    dest: "{{ item }}"
+    mode: push
+  delegate_to: "{{ groups['masters'][0] }}"
+  with_items:
+    - /etc/kubernetes/pki/ca.crt
+    - /etc/kubernetes/pki/ca.key
+    - /etc/kubernetes/pki/sa.key
+    - /etc/kubernetes/pki/sa.pub
+    - /etc/kubernetes/pki/front-proxy-ca.crt
+    - /etc/kubernetes/pki/front-proxy-ca.key
+    - /etc/kubernetes/pki/etcd/ca.crt
+    - /etc/kubernetes/pki/etcd/ca.key
+    - /etc/kubernetes/admin.conf
+
+- name: join remaining masters
+  block:
+
+  - name: join master [ takes a while ]
+    shell: "kubeadm join master.local:6443 --apiserver-advertise-address {{ control_ip }} --apiserver-bind-port 16643 --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
+    register: output
+
+  - name: create $HOME/.kube
+    file:
+      path: "{{ ansible_env.HOME }}/.kube"
+      state: directory
+      mode: 0755
+
+  - name: get user group
+    shell: id -gn
+    register: user_group
+
+  - name: copy /etc/kubernetes/admin.conf $HOME/.kube/config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: "{{ ansible_env.HOME }}/.kube/config"
+      owner: "{{ ansible_user_id }}"
+      group: "{{ user_group.stdout }}"
+      mode: 0644
+      remote_src: yes
+
+  when: master_of_masters != ansible_host
+
+- name: delete join token
+  shell: "kubeadm token delete {{ join_token }}"
+  delegate_to: "{{ master_of_masters }}"
+#  run_once: true

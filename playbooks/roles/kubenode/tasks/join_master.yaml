@@ -1,0 +1,67 @@
+- name: get master of master
+  set_fact:
+    master_of_masters: "{{ groups['masters'][0] }}"
+
+- name: get master of master
+  set_fact:
+    master_of_masters_fqdn: "{{ hostvars[master_of_masters]['control_fqdn'] }}"
+
+- name: check if master of master already runs
+  shell: kubectl get nodes || true
+  register: nodes_list
+  delegate_to: "{{ master_of_masters }}"
+
+- set_fact:
+   node_in_list: "{{ item | regex_search( ansible_hostname ) }}"
+  with_items: "{{ nodes_list.stdout_lines }}"
+
+- name: create node if not done
+  block:
+
+  - name: create api lb
+    include: api_lb.yaml
+
+  - name: make sure kubelet runs on correct address
+    lineinfile:
+      path: /etc/sysconfig/kubelet
+      regexp: 'KUBELET_EXTRA_ARGS=--node-ip=.*'
+      line: 'KUBELET_EXTRA_ARGS=--node-ip={{ control_ip }}'
+
+  - name: enable kubelet service
+    systemd:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: True
+
+  - name: create join token
+    block:
+      - shell: kubeadm token create
+        register: output
+      - set_fact:
+          join_token: "{{ output.stdout }}"
+    delegate_to: "{{ master_of_masters }}"
+    run_once: true
+
+  - name: create discovery token
+    block:
+      - shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+        register: output
+      - set_fact:
+          discovery_token: "{{ output.stdout }}"
+    delegate_to: "{{ master_of_masters }}"
+    run_once: true
+
+  - name: join master
+    shell: "kubeadm join --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification master.local:6443"
+
+  - name: label node
+    shell: "kubectl label nodes {{ ansible_hostname }} node-role.opencontrail.org=vrouter"
+    delegate_to: "{{ master_of_masters }}"
+
+  - name: delete join token
+    shell: "kubeadm token delete {{ join_token }}"
+    delegate_to: "{{ master_of_masters }}"
+    run_once: true
+  when:
+    - node_in_list == ""
