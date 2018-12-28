@@ -35,7 +35,7 @@
 
 - name: check if master is in nodes list
   set_fact:
-    master_in_list: "{{ item | regex_search( ansible_hostname ) }}"
+    master_in_list: "{{ item | regex_search( control_fqdn ) }}"
   with_items: "{{ nodes_list.stdout_lines }}"
 
 - name: create master if it doesn't exist

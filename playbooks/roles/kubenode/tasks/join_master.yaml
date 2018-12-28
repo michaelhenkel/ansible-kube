@@ -12,7 +12,7 @@
   delegate_to: "{{ master_of_masters }}"
 
 - set_fact:
-   node_in_list: "{{ item | regex_search( ansible_hostname ) }}"
+   node_in_list: "{{ item | regex_search( control_fqdn ) }}"
   with_items: "{{ nodes_list.stdout_lines }}"
 
 - name: create node if not done
@@ -53,10 +53,10 @@
     run_once: true
 
   - name: join master
-    shell: "kubeadm join --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification master.local:6443"
+    shell: "kubeadm join --node-name {{ control_fqdn }} --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification master.local:6443"
 
   - name: label node
-    shell: "kubectl label nodes {{ ansible_hostname }} node-role.opencontrail.org=vrouter"
+    shell: "kubectl label nodes {{ control_fqdn }} node-role.opencontrail.org=vrouter"
     delegate_to: "{{ master_of_masters }}"
 
   - name: delete join token

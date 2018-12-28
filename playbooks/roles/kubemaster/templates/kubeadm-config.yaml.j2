@@ -1,5 +1,7 @@
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: InitConfiguration
+nodeRegistration:
+  name: "{{ control_fqdn }}"
 localAPIEndpoint:
   advertiseAddress: "{{ control_ip }}"
   bindPort: 16443
@@ -14,6 +16,7 @@ apiServer:
     runtime-config:
       settings.k8s.io/v1alpha1=true
     enable-admission-plugins: PodPreset
+    kubernetes-service-node-port: "30001"
 controlPlaneEndpoint: "master.local:6443"
 #controlPlaneEndpoint: "{{ control_fqdn }}"
 networking:

@@ -40,6 +40,12 @@
       regexp: 'KUBELET_EXTRA_ARGS=--node-ip=.*'
       line: 'KUBELET_EXTRA_ARGS=--node-ip={{ control_ip }}'
 
+  - name: make sure kubelet uses correct name
+    lineinfile:
+      path: /etc/sysconfig/kubelet
+      regexp: 'KUBELET_EXTRA_ARGS=--hostname-override=.*'
+      line: 'KUBELET_EXTRA_ARGS=--hostname-override={{ control_ip }}'
+
   - name: enable kubelet service
     systemd:
       name: kubelet

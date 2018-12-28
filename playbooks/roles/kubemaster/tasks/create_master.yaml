@@ -44,13 +44,21 @@
       mode: 0644
       remote_src: yes
 
-  - name: create kube-flannel.yaml
-    template:
-      src: kube-flannel.yaml.j2
-      dest: /etc/kube-flannel.yaml
-
-  - name: install flannel
-    shell: kubectl apply -f /etc/kube-flannel.yaml
+#  - name: create kube-flannel.yaml
+#    template:
+#      src: kube-flannel.yaml.j2
+#      dest: /etc/kube-flannel.yaml
+#
+#  - name: install flannel
+#    shell: kubectl apply -f /etc/kube-flannel.yaml
+#
+#  - name: create kube-dns.yaml
+#    template:
+#      src: kube-dns.yaml.j2
+#      dest: /etc/kube-dns.yaml
+#
+#  - name: install dns service
+#    shell: kubectl apply -f /etc/kube-dns.yaml
   
   when: master_of_masters == ansible_host
 
@@ -99,7 +107,7 @@
   block:
 
   - name: join master [ takes a while ]
-    shell: "kubeadm join master.local:6443 --apiserver-advertise-address {{ control_ip }} --apiserver-bind-port 16643 --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
+    shell: "kubeadm join master.local:6443 --node-name {{ control_fqdn }} --apiserver-advertise-address {{ control_ip }} --apiserver-bind-port 16643 --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
     register: output
 
   - name: create $HOME/.kube
