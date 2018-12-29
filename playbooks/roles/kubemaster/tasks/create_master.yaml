@@ -107,7 +107,7 @@
   block:
 
   - name: join master [ takes a while ]
-    shell: "kubeadm join master.local:6443 --node-name {{ control_fqdn }} --apiserver-advertise-address {{ control_ip }} --apiserver-bind-port 16643 --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
+    shell: "kubeadm join master.local:6443 --node-name {{ control_fqdn }} --apiserver-advertise-address {{ control_ip }} --apiserver-bind-port 16443 --token {{ join_token }} --discovery-token-unsafe-skip-ca-verification --experimental-control-plane"
     register: output
 
   - name: create $HOME/.kube
