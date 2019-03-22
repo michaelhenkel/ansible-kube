@@ -44,22 +44,6 @@
       mode: 0644
       remote_src: yes
 
-#  - name: create kube-flannel.yaml
-#    template:
-#      src: kube-flannel.yaml.j2
-#      dest: /etc/kube-flannel.yaml
-#
-#  - name: install flannel
-#    shell: kubectl apply -f /etc/kube-flannel.yaml
-#
-#  - name: create kube-dns.yaml
-#    template:
-#      src: kube-dns.yaml.j2
-#      dest: /etc/kube-dns.yaml
-#
-#  - name: install dns service
-#    shell: kubectl apply -f /etc/kube-dns.yaml
-  
   when: master_of_masters == ansible_host
 
 - name: create join token

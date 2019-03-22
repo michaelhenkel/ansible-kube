@@ -40,4 +40,5 @@
 
 - name: create master if it doesn't exist
   include: create_master.yaml
-  when: (master_in_list is defined and master_in_list != "") or master_in_list is undefined
+  when: (master_in_list is defined and control_fqdn not in master_in_list) or master_in_list is undefined
+  #when: (master_in_list is defined and master_in_list != "") or master_in_list is undefined
