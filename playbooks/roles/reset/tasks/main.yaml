@@ -19,4 +19,4 @@
     path: "{{ item }}"
   with_items:
     - /var/lib/contrail
-    - /etc/sysconfig/network-scripts/ifcfg-vhost0
+      #    - /etc/sysconfig/network-scripts/ifcfg-vhost0

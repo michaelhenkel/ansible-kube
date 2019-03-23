@@ -3,12 +3,12 @@ all:
     masters:
       hosts:
         192.168.1.1:
-      vars:
+      #vars:
         #control_network: 192.168.2.0/24 #if control ingterface is in a different subnet
     nodes:
       hosts:
         192.168.1.2:
-      vars:
+      #vars:
         #control_network: 192.168.3.0/24 #if control ingterface is in a different subnet
   vars:
     ansible_user: <YOUR_SSH_USER>
