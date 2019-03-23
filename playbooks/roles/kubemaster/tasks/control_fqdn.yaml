@@ -2,12 +2,18 @@
   block:
   - name: get control network
     set_fact:
-      control_ip: "{{ ansible_all_ipv4_addresses | ipaddr(control_network) }}"
+      control_ip_list: "{{ ansible_all_ipv4_addresses | ipaddr(control_network) }}"
     when: control_network is defined
 
-  - name: set control ip
+  - name: set control ip when defined
     set_fact:
-      control_ip: "{{ control_ip[0] }}"
+      control_ip: "{{ control_ip_list[0] }}"
+    when: control_ip_list is defined
+  
+  - name: set control ip when not defined
+    set_fact:
+      control_ip: "{{ ansible_default_ipv4.address }}"
+    when: control_ip is undefined
 
   - name: get fqdn for control network
     shell: "python -c 'import socket; print socket.getfqdn(\"{{ control_ip }}\")'"

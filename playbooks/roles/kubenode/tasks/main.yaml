@@ -1,12 +1,33 @@
 ---
 - name: get control network
   set_fact:
-    control_ip: "{{ ansible_all_ipv4_addresses | ipaddr(control_network) }}"
+    control_ip_list: "{{ ansible_all_ipv4_addresses | ipaddr(control_network) }}"
   when: control_network is defined
 
-- name: set control ip
+- name: set control ip when defined
   set_fact:
-    control_ip: "{{ control_ip[0] }}"
+    control_ip: "{{ control_ip_list[0] }}"
+  when: control_ip_list is defined
+
+- name: set control ip when not defined
+  set_fact:
+    control_ip: "{{ ansible_default_ipv4.address }}"
+  when: control_ip is undefined
+
+  #- name: get control interface
+  #set_fact:
+  #  control_interface: "{{ item }}"
+  #when: >
+  #  (hostvars[inventory_hostname]['ansible_%s' % item]|default({}))
+  #  .get('ipv4', {}).get('address') == control_ip
+  #  or
+  #  control_ip in ((hostvars[inventory_hostname]['ansible_%s' % item]|default({}))
+  #  .get('ipv4_secondaries'))|map(attribute='address')|list
+  #with_items:
+  #  - "{{ ansible_interfaces }}"
+
+  #- name: disable dhcp for {{ control_interface }}
+  #shell: "nmcli device set {{ control_interface }} managed no"
 
 - name: get fqdn for control network
   shell: "python -c 'import socket; print socket.getfqdn(\"{{ control_ip }}\")'"

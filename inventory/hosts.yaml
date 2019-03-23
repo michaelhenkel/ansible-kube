@@ -2,16 +2,16 @@ all:
   children:
     masters:
       hosts:
-        192.168.1.100:
-        192.168.1.101:
-        192.168.1.102:
+        192.168.1.1:
       vars:
-        control_network: 192.168.2.0/24
+        #control_network: 192.168.2.0/24 #if control ingterface is in a different subnet
     nodes:
       hosts:
-        192.168.1.103:
+        192.168.1.2:
       vars:
-        control_network: 192.168.2.0/24
+        #control_network: 192.168.3.0/24 #if control ingterface is in a different subnet
   vars:
-    ansible_user: root
-    ansible_ssh_pass: contrail123
+    ansible_user: <YOUR_SSH_USER>
+    ansible_ssh_pass: <YOUR_SSH_PWD>
+    ansible_ssh_private_key_file: <PATH_TO_PRIVATE_SSH_KEY> #optional if ansible_ssh_pass is used
+    ansible_become: true

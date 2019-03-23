@@ -9,3 +9,14 @@
   docker_container:
     name: haproxy
     state: absent
+
+- name: stop vhost0
+  shell: ifdown vhost0
+
+- name: remove /var/lib/contrail and /etc/sysconfig/network-scripts/ifcfg-vhost0
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - /var/lib/contrail
+    - /etc/sysconfig/network-scripts/ifcfg-vhost0

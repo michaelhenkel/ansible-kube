@@ -8,7 +8,7 @@ localAPIEndpoint:
 ---
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: ClusterConfiguration
-kubernetesVersion: "v1.13.4"
+kubernetesVersion: "v{{ kubeversion.stdout }}"
 apiServer:
   certSANs:
   - "master.local"

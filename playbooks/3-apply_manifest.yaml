@@ -1,0 +1,4 @@
+- name: Apply manifests
+  hosts: masters[0]
+  roles:
+    - create_manifest

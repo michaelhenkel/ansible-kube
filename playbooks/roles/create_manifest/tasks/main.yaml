@@ -1,0 +1,23 @@
+- name: Download Contrail manifest
+  get_url:
+    url: https://raw.githubusercontent.com/michaelhenkel/contrail-kubeadm/master/contrail-3-node.yaml
+    dest: /tmp/contrail.yaml
+
+- name: set number of nodes to number of controllers if replicas undefined
+  set_fact:
+    nodes: "{{ groups['masters'] | length }}"
+  when: replicas is undefined
+
+- name: set number of nodes to number of replicas if replicas defined
+  set_fact:
+    nodes: "{{ groups['masters'] | length }}"
+  when: replicas is defined
+
+- name: set replicas to number of controller node if replicas undefined
+  replace:
+    path: /tmp/contrail.yaml
+    regexp: "replicas: 3"
+    replace: "replicas: {{ nodes }}"
+
+- name: apply contrail manifest
+  shell: kubectl apply -f /tmp/contrail.yaml

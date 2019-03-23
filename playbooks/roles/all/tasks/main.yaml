@@ -8,7 +8,45 @@
     repo_gpgcheck: yes
     gpgcheck: yes
 
+- name: create docker repo
+  yum_repository:
+    name: Docker
+    description: Docker Repository
+    baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+    gpgkey: https://download.docker.com/linux/centos/gpg
+    gpgcheck: yes
+
 # using this to avoid issue https://github.com/ansible/ansible/issues/20711
 - name: make cache to import gpg keys
-  command: "yum -q makecache -y --disablerepo='*' --enablerepo='Kubernetes'"
+  command: "yum -q makecache -y --disablerepo='*' --enablerepo='Kubernetes' --enablerepo='Docker'"
+  warn: False
 
+- name: install docker-ce kubelet kubeadm kubectl python-docker-py python2-openshift
+  yum:
+    name:
+      - docker-ce
+      - kubelet
+      - kubeadm
+      - kubectl
+      - python-docker-py
+    state: present
+
+- name: Make sure docker service is running
+  systemd:
+    state: started
+    name: docker
+    enabled: yes
+
+- name: Make sure kubelet service is running
+  systemd:
+    state: started
+    name: kubelet
+    enabled: yes
+
+- name: add master.local to /etc/hosts
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '^(127.0.0.1(.*)$)'
+    backrefs: yes
+    line: '\1 master.local'
+    state: present
