@@ -75,12 +75,10 @@
     state: directory
     mode: 0755
 
-- name: copy stuff from master of masters
-  synchronize:
+- name: fetch certs from master of masters
+  fetch:
     src: "{{ item }}"
-    dest: "{{ item }}"
-    mode: push
-  delegate_to: "{{ groups['masters'][0] }}"
+    dest: "/tmp"
   with_items:
     - /etc/kubernetes/pki/ca.crt
     - /etc/kubernetes/pki/ca.key
@@ -91,6 +89,43 @@
     - /etc/kubernetes/pki/etcd/ca.crt
     - /etc/kubernetes/pki/etcd/ca.key
     - /etc/kubernetes/admin.conf
+  when: master_of_masters == ansible_host
+
+- name: copy certs to remaining masters
+  copy:
+    src: "/tmp/{{ master_of_masters}}/{{ item }}"
+    dest: "{{ item }}"
+  with_items:
+    - /etc/kubernetes/pki/ca.crt
+    - /etc/kubernetes/pki/ca.key
+    - /etc/kubernetes/pki/sa.key
+    - /etc/kubernetes/pki/sa.pub
+    - /etc/kubernetes/pki/front-proxy-ca.crt
+    - /etc/kubernetes/pki/front-proxy-ca.key
+    - /etc/kubernetes/pki/etcd/ca.crt
+    - /etc/kubernetes/pki/etcd/ca.key
+    - /etc/kubernetes/admin.conf
+  when: master_of_masters != ansible_host
+  
+  #- name: copy stuff from master of masters
+  #synchronize:
+  #  src: "{{ item }}"
+  #  dest: "{{ item }}"
+  #  mode: push
+  #  private_key: ~/.ssh/id_rsa
+  #  set_remote_user: no
+  #delegate_to: "{{ groups['masters'][0] }}"
+  #remote_user: root
+  #with_items:
+  #  - /etc/kubernetes/pki/ca.crt
+  #  - /etc/kubernetes/pki/ca.key
+  #  - /etc/kubernetes/pki/sa.key
+  #  - /etc/kubernetes/pki/sa.pub
+  #  - /etc/kubernetes/pki/front-proxy-ca.crt
+  #  - /etc/kubernetes/pki/front-proxy-ca.key
+  #  - /etc/kubernetes/pki/etcd/ca.crt
+  #  - /etc/kubernetes/pki/etcd/ca.key
+  #  - /etc/kubernetes/admin.conf
 
 - name: join remaining masters
   block:
