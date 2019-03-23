@@ -17,7 +17,6 @@
 - name: get kubelet version
   shell: rpm -qa |grep kubelet |cut -d"-" -f2
   register: kubeversion
-  warn: False
 
 - name: init master of masters
   block:

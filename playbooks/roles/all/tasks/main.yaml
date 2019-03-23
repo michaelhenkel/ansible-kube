@@ -19,7 +19,6 @@
 # using this to avoid issue https://github.com/ansible/ansible/issues/20711
 - name: make cache to import gpg keys
   command: "yum -q makecache -y --disablerepo='*' --enablerepo='Kubernetes' --enablerepo='Docker'"
-  warn: False
 
 - name: install docker-ce kubelet kubeadm kubectl python-docker-py python2-openshift
   yum:
